@@ -18,8 +18,8 @@ class TrioTrader:
         data_loader_class = DataLoader("assets")
         time_series_panel = data_loader_class.load_whole_table()
         time_series_matrix = panel_to_matrix_transformer.transform_panel_to_matrix(panel_data=time_series_panel, index="date", columns="asset", values="value")
-       
-        cointegration_calculator = CointegrationCalculator()
+
+        cointegration_calculator = CointegrationCalculator(time_series_matrix[0:100])
         cointegrated_series = cointegration_calculator.find_cointegrated_assets()
         print(cointegrated_series)
 
