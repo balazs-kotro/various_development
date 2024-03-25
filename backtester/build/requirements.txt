@@ -17,3 +17,4 @@ pytest
 PyYAML
 psycopg2-binary
 SQLAlchemy
+statsmodels

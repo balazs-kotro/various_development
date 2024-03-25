@@ -1,7 +1,6 @@
-
-
 import pandas as pd
 from trading.data_loader.data_loader import DataLoader
+import trading.data_loader.panel_to_matrix_transformer as panel_to_matrix_transformer
 from trading.data_writer.data_writer import DataWriter
 from trading.cointegration_calculator.cointegration_calculator import CointegrationCalculator
 from trading.z_score_calculator.z_score_calculator import ZScoreCalculator, InputSeries
@@ -17,11 +16,9 @@ class TrioTrader:
     def run(self) -> None:
 
         data_loader_class = DataLoader("assets")
-        time_series_matrix = data_loader_class.load_data_from_database()
-        print(time_series_matrix)
-        data_loader_class.load_whole_table()
-
-
+        time_series_panel = data_loader_class.load_whole_table()
+        time_series_matrix = panel_to_matrix_transformer.transform_panel_to_matrix(panel_data=time_series_panel, index="date", columns="asset", values="value")
+       
         cointegration_calculator = CointegrationCalculator()
         cointegrated_series = cointegration_calculator.find_cointegrated_assets()
         print(cointegrated_series)

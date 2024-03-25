@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, MetaData, Table, select
+import pandas as pd
 
 class DataLoader:
     def __init__(self, table_name: str) -> None:
@@ -17,6 +18,6 @@ class DataLoader:
 
         execution = connection.execute(table_metadata.select())
         result = pd.DataFrame(execution.fetchall(), columns = table_metadata.columns.keys())
-        conn.close()
+        connection.close()
 
         return result
