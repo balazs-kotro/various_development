@@ -9,7 +9,6 @@ class DataLoader:
         return "1 - DataLoader is called"
 
     def load_whole_table(self):
-        from sqlalchemy import create_engine, MetaData, Table, select
         engine = create_engine('postgresql://postgres:asd@host.docker.internal:5432/postgres')
         connection = engine.connect() 
 

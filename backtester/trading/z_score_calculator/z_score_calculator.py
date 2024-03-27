@@ -10,8 +10,9 @@ class InputSeries:
 
 class ZScoreCalculator:
 
-    def __init__(self, input_data: InputSeries):
+    def __init__(self, input_data: pd.DataFrame, asset_list: list):
         self.input_data = input_data
+        self.asset_list = asset_list
 
     def calculate_z_score(self, input_series: pd.Series) -> pd.Series: 
         return (input_series - input_series.mean()) / np.std(input_series)
@@ -27,4 +28,6 @@ class ZScoreCalculator:
         return InputSeries(*z_score_list)
 
     def calculate_z_scores(self): 
-        return "3 - ZScoreCalculator is called", pd.Series([1])
+        print (self.asset_list)
+        
+
