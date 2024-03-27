@@ -2,7 +2,9 @@ import pandas as pd
 from trading.data_loader.data_loader import DataLoader
 import trading.data_loader.panel_to_matrix_transformer as panel_to_matrix_transformer
 from trading.data_writer.data_writer import DataWriter
-from trading.cointegration_calculator.cointegration_calculator import CointegrationCalculator
+from trading.cointegration_calculator.cointegration_calculator import (
+    CointegrationCalculator,
+)
 from trading.z_score_calculator.z_score_calculator import ZScoreCalculator, InputSeries
 from trading.position_creator.position_creator import PositionGenerator
 import pickle
@@ -18,20 +20,31 @@ class TrioTrader:
 
         data_loader_class = DataLoader("assets")
         time_series_panel = data_loader_class.load_whole_table()
-        time_series_matrix = panel_to_matrix_transformer.transform_panel_to_matrix(panel_data=time_series_panel, index="date", columns="asset", values="value")
+        time_series_matrix = panel_to_matrix_transformer.transform_panel_to_matrix(
+            panel_data=time_series_panel, index="date", columns="asset", values="value"
+        )
 
         if self.run_cointegration:
-            cointegration_calculator = CointegrationCalculator(time_series_matrix[0:500])
-            cointegrated_assets_list = cointegration_calculator.find_cointegrated_assets()
-        
-            with open('/app/trading/processes/trio_trader/cointegrated_assets_list.pkl', 'wb') as file:
+            cointegration_calculator = CointegrationCalculator(
+                time_series_matrix[0:500]
+            )
+            cointegrated_assets_list = (
+                cointegration_calculator.find_cointegrated_assets()
+            )
+
+            with open(
+                "/app/trading/processes/trio_trader/cointegrated_assets_list.pkl", "wb"
+            ) as file:
                 pickle.dump(cointegrated_assets_list, file)
         else:
-            with open('/app/trading/processes/trio_trader/cointegrated_assets_list.pkl', 'rb') as file:
+            with open(
+                "/app/trading/processes/trio_trader/cointegrated_assets_list.pkl", "rb"
+            ) as file:
                 cointegrated_assets_list = pickle.load(file)
-        
 
-        z_score_calculator = ZScoreCalculator(time_series_matrix[0:500], cointegrated_assets_list)
+        z_score_calculator = ZScoreCalculator(
+            time_series_matrix[0:500], cointegrated_assets_list
+        )
         z_score_calculator.calculate_z_scores()
 
         # position_generator = PositionGenerator(dummy_z_score, 1.0, 1.0, 1.0, 1.0)

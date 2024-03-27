@@ -5,13 +5,7 @@ from statsmodels.tsa.api import VAR
 from scipy.stats import chi2
 
 
-
-
-
 if __name__ == "__main__":
-
-
-
 
     # Generate sample data
     nobs = 100
@@ -21,13 +15,13 @@ if __name__ == "__main__":
     # Concatenate variables
     data = np.concatenate((x, y), axis=1)
 
-
     result_with_constant = coint_johansen(y, det_order=1, k_ar_diff=2)
-
 
     cointegration_vector = result_with_constant.evec
 
-# Calculate weights
-    weights = cointegration_vector / cointegration_vector[0]  # Normalize by the first element
+    # Calculate weights
+    weights = (
+        cointegration_vector / cointegration_vector[0]
+    )  # Normalize by the first element
 
     print("Weights:", cointegration_vector)

@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, MetaData, Table, select
 import pandas as pd
 
+
 class DataLoader:
     def __init__(self, table_name: str) -> None:
         self.table_name = table_name
@@ -9,14 +10,18 @@ class DataLoader:
         return "1 - DataLoader is called"
 
     def load_whole_table(self):
-        engine = create_engine('postgresql://postgres:asd@host.docker.internal:5432/postgres')
-        connection = engine.connect() 
+        engine = create_engine(
+            "postgresql://postgres:asd@host.docker.internal:5432/postgres"
+        )
+        connection = engine.connect()
 
         metadata = MetaData()
-        table_metadata= Table('assets', metadata, autoload_with=engine)
+        table_metadata = Table("assets", metadata, autoload_with=engine)
 
         execution = connection.execute(table_metadata.select())
-        result = pd.DataFrame(execution.fetchall(), columns = table_metadata.columns.keys())
+        result = pd.DataFrame(
+            execution.fetchall(), columns=table_metadata.columns.keys()
+        )
         connection.close()
 
         return result

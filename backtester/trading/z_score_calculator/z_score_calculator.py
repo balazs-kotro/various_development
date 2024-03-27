@@ -2,11 +2,13 @@ import pandas as pd
 import numpy as np
 from dataclasses import dataclass, fields
 
+
 @dataclass
 class InputSeries:
     input_time_series_a: pd.Series
     input_time_series_b: pd.Series
     input_time_series_c: pd.Series
+
 
 class ZScoreCalculator:
 
@@ -14,7 +16,7 @@ class ZScoreCalculator:
         self.input_data = input_data
         self.asset_list = asset_list
 
-    def calculate_z_score(self, input_series: pd.Series) -> pd.Series: 
+    def calculate_z_score(self, input_series: pd.Series) -> pd.Series:
         return (input_series - input_series.mean()) / np.std(input_series)
 
     def run(self):
@@ -27,7 +29,5 @@ class ZScoreCalculator:
 
         return InputSeries(*z_score_list)
 
-    def calculate_z_scores(self): 
-        print (self.asset_list)
-        
-
+    def calculate_z_scores(self):
+        print(self.asset_list)
