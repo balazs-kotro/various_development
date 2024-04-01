@@ -42,14 +42,17 @@ class TrioTrader:
             ) as file:
                 cointegrated_assets_list = pickle.load(file)
 
-        z_score_calculator = ZScoreCalculator(
-            time_series_matrix[0:500], cointegrated_assets_list
-        )
-        z_score_calculator.calculate_z_scores()
+        for cointegrated_asset_triplet in cointegrated_assets_list:
+            z_score_calculator = ZScoreCalculator(
+                time_series_matrix[0:500], cointegrated_asset_triplet
+            )
+            z_score_spread = z_score_calculator.run()
 
-        # position_generator = PositionGenerator(dummy_z_score, 1.0, 1.0, 1.0, 1.0)
-        # generated_positions = position_generator.generate_positions()
-        # print(generated_positions)
+            position_generator = PositionGenerator(time_series_matrix[0:500], z_score_spread, cointegrated_asset_triplet, 30, 2.0, 0.5, -2.0, -0.5)
+            generated_positions = position_generator.initial_trade()
+            if pd.notnull(generated_positions):
+                print(generated_positions.assets)
+                print(generated_positions.values)
 
         # data_writer_class = DataWriter()
         # stored_positions = data_writer_class.write_data_to_database()
@@ -63,5 +66,5 @@ if __name__ == "__main__":
         input_time_series_c=pd.Series([15, 18, 10], name="C_asset"),
     )
 
-    trio_trader = TrioTrader(input_data=data_instance, run_cointegration=True)
+    trio_trader = TrioTrader(input_data=data_instance, run_cointegration=False)
     trio_trader.run()

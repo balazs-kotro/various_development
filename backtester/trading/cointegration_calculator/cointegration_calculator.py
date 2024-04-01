@@ -34,36 +34,27 @@ class CointegrationCalculator:
         cointegrated_assets_list = []
         for triplet in triplets:
 
-            triplet_permutations = list(permutations(triplet))
-            for triplet_permutation in triplet_permutations:
+            asset_dataframe = self.dataframe_wrapper(asset_list=triplet)
 
-                asset_dataframe = self.dataframe_wrapper(asset_list=triplet_permutation)
+            optimal_cointegration_results, optimal_lag = best_johansen_model_finder(
+                asset_dataframe=asset_dataframe, max_lag=6
+            )
 
-                optimal_cointegration_results, optimal_lag = best_johansen_model_finder(
-                    asset_dataframe=asset_dataframe, max_lag=6
-                )
+            cointegrated_asset_specifications = list_cointegrated_assets(
+                triplet=triplet,
+                cointegration_results=optimal_cointegration_results,
+                optimal_lag=optimal_lag,
+            )
+            if pd.isnull(
+                cointegrated_asset_specifications
+            ) or check_if_all_element_is_larger_than_threshold(
+                cointegrated_asset_specifications[1], 0
+            ):
+                continue
+            else:
+                cointegrated_assets_list.append(cointegrated_asset_specifications)
 
-                cointegrated_asset_specifications = list_cointegrated_assets(
-                    triplet=triplet_permutation,
-                    cointegration_results=optimal_cointegration_results,
-                    optimal_lag=optimal_lag,
-                )
-                if pd.isnull(cointegrated_asset_specifications):
-                    break
-                else:
-                    if integer_threshold_checker_for_list(
-                        cointegrated_asset_specifications[1], 0
-                    ):
-                        print(triplet_permutation)
-                        print(cointegrated_asset_specifications[1])
-                        continue
-                    else:
-                        cointegrated_assets_list.append(
-                            cointegrated_asset_specifications
-                        )
-                        break
-
-        filtered_list = cointegrated_assets_list  # list(filter(lambda x: x is not None, cointegrated_assets_list))
+        filtered_list = cointegrated_assets_list
         return filtered_list
 
 
@@ -122,5 +113,9 @@ def list_cointegrated_assets(triplet, cointegration_results, optimal_lag) -> tup
         return (triplet, weights, optimal_lag)
 
 
-def integer_threshold_checker_for_list(input_list: list, threshold: int):
+def check_if_all_element_is_larger_than_threshold(input_list: list, threshold: int):
     return all(element > threshold for element in input_list)
+
+def check_if_all_element_is_smaller_than_threshold(input_list: list, threshold: int):
+    absolute_list = [abs(element) for element in input_list]
+    return any(element < threshold for element in absolute_list)
