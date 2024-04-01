@@ -17,7 +17,7 @@ RUN pip install --upgrade pip
 
 
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-## COPY --from=builder /usr/local/lib/bin/pytest /usr/local/lib/bin/pytest
+COPY --from=builder /usr/local/bin/pytest /usr/local/bin/pytest
 ## COPY --from=builder /usr/local/lib/bin/mypy /usr/local/lib/bin/mypy
 ## COPY --from=builder /usr/local/lib/bin/coverage /usr/local/lib/bin/coverage 
 

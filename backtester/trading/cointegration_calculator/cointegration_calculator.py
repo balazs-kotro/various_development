@@ -6,6 +6,7 @@ from statsmodels.tsa.vector_ar.vecm import coint_johansen
 from statsmodels.tsa.api import VAR
 from scipy.stats import chi2
 from typing import Tuple, List
+from itertools import permutations
 
 
 class CointegrationCalculator:
@@ -30,25 +31,39 @@ class CointegrationCalculator:
 
     def find_cointegrated_assets(self) -> list:
         triplets = list(combinations(self.time_series_matrix.columns, 3))
-
         cointegrated_assets_list = []
         for triplet in triplets:
 
-            asset_dataframe = self.dataframe_wrapper(asset_list=triplet)
+            triplet_permutations = list(permutations(triplet))
+            for triplet_permutation in triplet_permutations:
 
-            optimal_cointegration_results, optimal_lag = best_johansen_model_finder(
-                asset_dataframe=asset_dataframe, max_lag=6
-            )
+                asset_dataframe = self.dataframe_wrapper(asset_list=triplet_permutation)
 
-            cointegrated_assets_list.append(
-                list_cointegrated_assets(
-                    triplet=triplet,
+                optimal_cointegration_results, optimal_lag = best_johansen_model_finder(
+                    asset_dataframe=asset_dataframe, max_lag=6
+                )
+
+                cointegrated_asset_specifications = list_cointegrated_assets(
+                    triplet=triplet_permutation,
                     cointegration_results=optimal_cointegration_results,
                     optimal_lag=optimal_lag,
                 )
-            )
+                if pd.isnull(cointegrated_asset_specifications):
+                    break
+                else:
+                    if integer_threshold_checker_for_list(
+                        cointegrated_asset_specifications[1], 0
+                    ):
+                        print(triplet_permutation)
+                        print(cointegrated_asset_specifications[1])
+                        continue
+                    else:
+                        cointegrated_assets_list.append(
+                            cointegrated_asset_specifications
+                        )
+                        break
 
-        filtered_list = list(filter(lambda x: x is not None, cointegrated_assets_list))
+        filtered_list = cointegrated_assets_list  # list(filter(lambda x: x is not None, cointegrated_assets_list))
         return filtered_list
 
 
@@ -72,7 +87,7 @@ def best_johansen_model_finder(asset_dataframe: pd.DataFrame, max_lag: int):
 
     for lag in range(1, max_lag):
         cointegration_results = coint_johansen(
-            asset_dataframe, det_order=1, k_ar_diff=lag
+            asset_dataframe, det_order=0, k_ar_diff=lag
         )
 
         likelihood_of_the_null_pypothesis = cointegration_results.lr1[0]
@@ -105,3 +120,7 @@ def list_cointegrated_assets(triplet, cointegration_results, optimal_lag) -> tup
 
     if number_of_cointegrating_relationships == 3:
         return (triplet, weights, optimal_lag)
+
+
+def integer_threshold_checker_for_list(input_list: list, threshold: int):
+    return all(element > threshold for element in input_list)
