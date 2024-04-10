@@ -28,6 +28,7 @@ class ZScoreCalculator:
 def calculate_spread(input_data: pd.DataFrame, asset_list: list) -> pd.Series:
     weights = asset_list[1]
     assets = asset_list[0]
+
     spread_time_series = (
         input_data[assets[0]].astype(float).values
         + weights[1] * input_data[assets[1]].astype(float).values

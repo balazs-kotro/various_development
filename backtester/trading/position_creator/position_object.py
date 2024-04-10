@@ -22,4 +22,4 @@ class Positions:
         summed_assets = tuple(all_assets)
         summed_values = tuple(summed_values[asset] for asset in summed_assets)
 
-        return Trade(summed_assets, summed_values)
+        return Positions(summed_assets, summed_values)

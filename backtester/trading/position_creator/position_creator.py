@@ -28,31 +28,60 @@ class PositionGenerator:
 
     def initial_trade(self) -> Positions:
 
-        assets = self.asset_list[0]
+        assets = list(self.asset_list[0])
 
-        first_asset_amount = calculate_amount_to_invest_in_asset(
-            trade_amount=self.sum_trade_amount,
-            asset_list=self.asset_list,
-            asset_number=0,
+        first_asset_amount = (
+            calculate_ratio_to_invest_in_asset(
+                initial_investment_amount=self.sum_trade_amount,
+                asset_list=self.asset_list,
+                time_series_matrix=self.asset_dataframe,
+            )[0]
         )
-        second_asset_amount = calculate_amount_to_invest_in_asset(
-            trade_amount=self.sum_trade_amount,
-            asset_list=self.asset_list,
-            asset_number=1,
+
+        second_asset_amount = (
+            calculate_ratio_to_invest_in_asset(
+                initial_investment_amount=self.sum_trade_amount,
+                asset_list=self.asset_list,
+                time_series_matrix=self.asset_dataframe,
+            )[1]
         )
-        third_asset_amount = calculate_amount_to_invest_in_asset(
-            trade_amount=self.sum_trade_amount,
-            asset_list=self.asset_list,
-            asset_number=2,
+
+        third_asset_amount = (
+            calculate_ratio_to_invest_in_asset(
+                initial_investment_amount=self.sum_trade_amount,
+                asset_list=self.asset_list,
+                time_series_matrix=self.asset_dataframe,
+            )[2]
         )
 
         if self.z_score_data.iloc[-1] >= self.static_upper_entrance_threshold:
-            return Positions(assets, (-first_asset_amount, -second_asset_amount, -third_asset_amount))
+            assets_and_position_list = position_aggregator(
+                float_list=[
+                    first_asset_amount,
+                    second_asset_amount,
+                    third_asset_amount,
+                ],
+                asset_list=assets,
+                threshold=5,
+            )
+            assets_and_position_list[0] = [
+                -element for element in assets_and_position_list[0]
+            ]
+            return Positions(assets_and_position_list[1], assets_and_position_list[0])
         elif self.z_score_data.iloc[-1] <= self.static_lower_entrance_threshold:
-            return Positions(assets, (first_asset_amount, second_asset_amount, third_asset_amount))
+
+            assets_and_position_list = position_aggregator(
+                float_list=[
+                    first_asset_amount,
+                    second_asset_amount,
+                    third_asset_amount,
+                ],
+                asset_list=assets,
+                threshold=5,
+            )
+            return Positions(assets_and_position_list[1], assets_and_position_list[0])
         else:
             pass
-
 
     # def initial_trade(self):
     #     trade_on_a_and_b = self.trade_direction(
@@ -70,22 +99,46 @@ class PositionGenerator:
     #     )
 
 
-def calculate_amount_to_invest_in_asset(
-    trade_amount: float,
-    asset_list: list,
-    asset_number: int,
+def calculate_ratio_to_invest_in_asset(
+    initial_investment_amount: float, asset_list: list, time_series_matrix: pd.DataFrame
 ) -> float:
-    original_amount_to_invest_in_one_asset = trade_amount / 2.0
+    assets = asset_list[0]
     weights = asset_list[1]
-    
-    sum_weights = weights[1] + weights[2]
-   
-    
-    second_weight_ratio =  weights[1] / abs(sum_weights)
-    third_weight_ratio = weights[2] / abs(sum_weights)
-    
-    weight_ratio = [1, second_weight_ratio, third_weight_ratio]
-    return (original_amount_to_invest_in_one_asset * weight_ratio[asset_number])
+    filtered_dataframe = time_series_matrix.astype(float)[list(assets)]
+
+    positive_indices = find_positive_or_negative_indices_in_list(
+        input_list=weights, indicator="positive"
+    )
+    negative_indices = find_positive_or_negative_indices_in_list(
+        input_list=weights, indicator="negative"
+    )
+
+    positive_asset_ratios = asset_ratio_calculator(
+        initial_investment_amount=initial_investment_amount,
+        weights=weights,
+        time_series_matrix=filtered_dataframe,
+        indicator="positive",
+    )
+
+    negative_asset_ratios = asset_ratio_calculator(
+        initial_investment_amount=initial_investment_amount,
+        weights=weights,
+        time_series_matrix=filtered_dataframe,
+        indicator="negative",
+    )
+
+    result_list = [None, None, None]
+
+    for element in range(len(positive_asset_ratios)):
+        proper_index = positive_indices[element]
+        result_list[proper_index] = positive_asset_ratios.iloc[element]
+
+    for element in range(len(negative_asset_ratios)):
+        proper_index = negative_indices[element]
+        result_list[proper_index] = -negative_asset_ratios.iloc[element]
+
+
+    return list(result_list * filtered_dataframe.values[-1])
 
 def first_positive_index(lst):
     for i, num in enumerate(lst):
@@ -93,36 +146,72 @@ def first_positive_index(lst):
             return i
     return None
 
+
 def first_negative_index(lst):
     for i, num in enumerate(lst):
         if num is not None and num < 0:
             return i
-    return None 
+    return None
 
-def add_positive_to_positive_and_negative_to_negative(float_list, asset_list, threshold):
+
+def position_aggregator(float_list, asset_list, threshold):
     positive_sum = 0
     negative_sum = 0
     modified_float_list = float_list.copy()
     modified_asset_list = asset_list.copy()
-    
-    
+
     for num in float_list:
         if num > 0:
             positive_sum += num
         elif num < 0:
             negative_sum += num
-    
 
     for num in range(len(float_list)):
-        if float_list[num] > 0 and abs(float_list[num]) < threshold: 
+        if float_list[num] > 0 and abs(float_list[num]) < threshold:
             modified_asset_list[num] = None
             modified_float_list[num] = None
             if pd.notnull(first_positive_index(modified_float_list)):
-                modified_float_list[first_positive_index(modified_float_list)] = positive_sum
+                modified_float_list[first_positive_index(modified_float_list)] = (
+                    positive_sum
+                )
         elif float_list[num] < 0 and abs(float_list[num]) < threshold:
             modified_asset_list[num] = None
             modified_float_list[num] = None
             if pd.notnull(first_negative_index(modified_float_list)):
-                modified_float_list[first_negative_index(modified_float_list)] = negative_sum
+                modified_float_list[first_negative_index(modified_float_list)] = (
+                    negative_sum
+                )
 
     return [modified_float_list, modified_asset_list]
+
+
+def find_positive_or_negative_indices_in_list(input_list: list, indicator: str):
+    if indicator == "positive":
+        indices = [i for i, num in enumerate(input_list) if num > 0]
+    if indicator == "negative":
+        indices = [i for i, num in enumerate(input_list) if num < 0]
+    return indices
+
+
+def asset_ratio_calculator(
+    initial_investment_amount: float,
+    weights: list,
+    time_series_matrix: pd.DataFrame,
+    indicator: str,
+):
+    asset_weights = find_positive_or_negative_indices_in_list(
+        input_list=weights, indicator=indicator
+    )
+    asset_weight_values = [weights[i] for i in asset_weights]
+    assets = time_series_matrix.iloc[:, asset_weights]
+    assets_last_values = assets.iloc[-1, :]
+    weighted_amounts = assets_last_values * asset_weight_values
+    artificial_time_series_latest_positive_value = sum(
+        assets_last_values * asset_weight_values
+    )
+    money_allocation_ratio = (
+        weighted_amounts / artificial_time_series_latest_positive_value
+    )
+    money_allocation = money_allocation_ratio * initial_investment_amount
+    asset_allocation = pd.Series(money_allocation) / pd.Series(assets_last_values)
+    return asset_allocation
