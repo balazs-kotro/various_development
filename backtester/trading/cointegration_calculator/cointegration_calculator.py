@@ -47,8 +47,6 @@ class CointegrationCalculator:
             )
             if pd.isnull(
                 cointegrated_asset_specifications
-            ) or check_if_all_element_is_larger_than_threshold(
-                cointegrated_asset_specifications[1], 0
             ):
                 continue
             else:

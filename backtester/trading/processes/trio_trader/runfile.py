@@ -7,7 +7,9 @@ from trading.cointegration_calculator.cointegration_calculator import (
 )
 from trading.z_score_calculator.z_score_calculator import ZScoreCalculator, InputSeries
 from trading.position_creator.position_creator import PositionGenerator, Positions
+from trading.position_creator.super_position_object import SuperPosition
 import pickle
+import uuid
 
 
 class TrioTrader:
@@ -18,7 +20,8 @@ class TrioTrader:
 
     def run(self) -> None:
 
-        initial_trade_collection = None
+        aggregated_initial_trades = None
+        super_position = SuperPosition()
         initial_trade_list = []
 
         data_loader_class = DataLoader("assets")
@@ -27,49 +30,136 @@ class TrioTrader:
             panel_data=time_series_panel, index="date", columns="asset", values="value"
         )
 
-        i = 0
+        parent_id = uuid.uuid4()
 
-        # for i in range(0,1):
-        if initial_trade_collection is None:
-            if self.run_cointegration:
-                cointegration_calculator = CointegrationCalculator(
-                    time_series_matrix[0:500]
+        for i in range(0, 1):
+            if aggregated_initial_trades is None:
+                if self.run_cointegration:
+                    cointegration_calculator = CointegrationCalculator(
+                        time_series_matrix[0:500]
+                    )
+                    cointegrated_assets_list = (
+                        cointegration_calculator.find_cointegrated_assets()
+                    )
+
+                    with open(
+                        "/app/trading/processes/trio_trader/cointegrated_assets_list.pkl",
+                        "wb",
+                    ) as file:
+                        pickle.dump(cointegrated_assets_list, file)
+                else:
+                    with open(
+                        "/app/trading/processes/trio_trader/cointegrated_assets_list.pkl",
+                        "rb",
+                    ) as file:
+                        cointegrated_assets_list = pickle.load(file)
+
+                for cointegrated_asset_triplet in cointegrated_assets_list:
+                    z_score_calculator = ZScoreCalculator(
+                        time_series_matrix[0 : 500 + i], cointegrated_asset_triplet
+                    )
+                    z_score_spread = z_score_calculator.run()
+
+                    position_generator = PositionGenerator(
+                        time_series_matrix[0 : 500 + i],
+                        z_score_spread,
+                        cointegrated_asset_triplet,
+                        None,
+                        None,
+                        50,
+                        2.0,
+                        0.4,
+                        -2.5,
+                        -0.4,
+                    )
+                    initial_trade = position_generator.initial_trade()
+                    if pd.notnull(initial_trade):
+                        initial_trade_list.append(initial_trade)
+                        position_id = getattr(initial_trade, "position_id")
+                        assets = getattr(initial_trade, "assets")
+                        asset_ratios = getattr(initial_trade, "asset_ratios")
+                        invested_amounts = getattr(initial_trade, "invested_amounts")
+                        weights = getattr(initial_trade, "weights")
+                        date = getattr(initial_trade, "date")
+
+                        print(position_id)
+                        print(assets)
+                        print(asset_ratios)
+                        print(invested_amounts)
+                        print(weights)
+                        print(date)
+
+                        DataWriter(initial_trade).write_data_to_database()
+
+                        super_position.add_class(initial_trade)
+
+                aggregated_initial_trades = Positions.sum_instances(
+                    initial_trade_list, parernt_id=parent_id
                 )
-                cointegrated_assets_list = (
-                    cointegration_calculator.find_cointegrated_assets()
+                position_id = getattr(aggregated_initial_trades, "position_id")
+                assets = getattr(aggregated_initial_trades, "assets")
+                asset_ratios = getattr(aggregated_initial_trades, "asset_ratios")
+                invested_amounts = getattr(
+                    aggregated_initial_trades, "invested_amounts"
                 )
 
-                with open(
-                    "/app/trading/processes/trio_trader/cointegrated_assets_list.pkl", "wb"
-                ) as file:
-                    pickle.dump(cointegrated_assets_list, file)
+            # print(position_id)
+            # print(assets)
+            # print(asset_ratios)
+            # print(invested_amounts)
+            # print(weights)
+
             else:
-                with open(
-                    "/app/trading/processes/trio_trader/cointegrated_assets_list.pkl", "rb"
-                ) as file:
-                    cointegrated_assets_list = pickle.load(file)
-        else:
-            time_series_matrix_in_iteration = time_series_matrix[getattr(aggregated_initial_trades, 'assets')]
+                cointegrated_assets_list = list(
+                    getattr(aggregated_initial_trades, "assets")
+                )
 
-        for cointegrated_asset_triplet in cointegrated_assets_list:
-            cointegrated_asset_triplet_list = list(cointegrated_asset_triplet)
-            z_score_calculator = ZScoreCalculator(
-                time_series_matrix[0:500+i], cointegrated_asset_triplet
-            )
-            z_score_spread = z_score_calculator.run()
+                classes = super_position.get_classes()
 
-            position_generator = PositionGenerator(time_series_matrix[0:500], z_score_spread, cointegrated_asset_triplet, 50, 2.0, 0.5, -2.0, -0.5)
-            initial_trade = position_generator.initial_trade()
-            if pd.notnull(initial_trade):
-                initial_trade_list.append(initial_trade)
-                assets = getattr(initial_trade, 'assets')
-                values = getattr(initial_trade, 'values')
-                print([assets, values])
+                for current_class in range(len(classes)):
+                    cointegrated_asset_triplet = getattr(
+                        classes[current_class], "assets"
+                    )
+                    weights = getattr(classes[current_class], "weights")
+                    asset_ratios = getattr(classes[current_class], "asset_ratios")
+                    z_score_calculator = ZScoreCalculator(
+                        time_series_matrix[0 : 500 + i - 1],
+                        list([cointegrated_asset_triplet, weights]),
+                    )
+                    z_score_spread = z_score_calculator.run()
+                    position_generator = PositionGenerator(
+                        time_series_matrix[0 : 500 + i - 1],
+                        z_score_spread,
+                        cointegrated_asset_triplet,
+                        asset_ratios,
+                        position_id,
+                        50,
+                        2.0,
+                        0.5,
+                        -2.5,
+                        -1.0,
+                    )
 
-            # aggregated_initial_trades = Positions.sum_instances(initial_trade_list)
-            # assets = getattr(aggregated_initial_trades, 'assets')
-            # values = getattr(aggregated_initial_trades, 'values')
-            # print([assets, values])
+                    intermittent_trade = position_generator.intermittent_trade()
+
+                    if pd.notnull(intermittent_trade):
+                        position_id = getattr(intermittent_trade, "position_id")
+                        assets = getattr(intermittent_trade, "assets")
+                        asset_ratios = getattr(intermittent_trade, "asset_ratios")
+                        date = getattr(intermittent_trade, "date")
+                        invested_amounts = getattr(
+                            intermittent_trade, "invested_amounts"
+                        )
+                        print(i)
+                        print(position_id)
+                        print(assets)
+                        print(asset_ratios)
+                        print(invested_amounts)
+                        print(date)
+
+                        DataWriter(intermittent_trade).write_data_to_database()
+
+                        super_position.remove_class(classes[current_class])
 
         # data_writer_class = DataWriter()
         # stored_positions = data_writer_class.write_data_to_database()
