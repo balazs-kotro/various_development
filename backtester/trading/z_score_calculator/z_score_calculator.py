@@ -16,13 +16,16 @@ class ZScoreCalculator:
         self.input_data = input_data
         self.asset_list = asset_list
 
+    # TODO the 500 is just a hotfix, delete asap
     def calculate_z_score(self, input_series: pd.Series) -> pd.Series:
-        return (input_series - input_series.mean()) / np.std(input_series)
+        return (input_series - input_series[0:500].mean()) / np.std(input_series[0:500])
 
     def run(self):
-        spread_series = calculate_spread(input_data= self.input_data, asset_list=self.asset_list )
+        spread_series = calculate_spread(
+            input_data=self.input_data, asset_list=self.asset_list
+        )
         spread_time_series = self.calculate_z_score(spread_series)
-        return spread_time_series
+        return spread_series, spread_time_series
 
 
 def calculate_spread(input_data: pd.DataFrame, asset_list: list) -> pd.Series:

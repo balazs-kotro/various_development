@@ -8,16 +8,20 @@ class Positions:
         position_id,
         date,
         assets,
-        asset_ratios,
+        regression_weights,
+        trade_weights,
         invested_amounts,
-        weights
+        scaling_factor,
+        position_sign
     ):
         self.position_id = position_id
         self.assets = assets
         self.date=date
-        self.asset_ratios = asset_ratios
+        self.scaling_factor = scaling_factor
         self.invested_amounts = invested_amounts
-        self.weights = weights
+        self.regression_weights = regression_weights
+        self.trade_weights = trade_weights
+        self.position_sign=position_sign
 
     @classmethod
     def sum_instances(cls, instances, parernt_id):
@@ -47,5 +51,6 @@ class Positions:
             date=None,
             asset_ratios=summed_ratio_values,
             invested_amounts=summed_values,
-            weights=None
+            weights=None,
+            position_sign=None
         )

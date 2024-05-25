@@ -17,10 +17,11 @@ class DataWriter:
 
         position_id = getattr(self.position_class, "position_id")
         assets = getattr(self.position_class, "assets")
-        asset_ratios = getattr(self.position_class, "asset_ratios")
+        scaler_factor = getattr(self.position_class, "scaling_factor")
         invested_amounts = getattr(self.position_class, "invested_amounts")
-        weights = getattr(self.position_class, "weights")
+        weights = getattr(self.position_class, "regression_weights")
         date = getattr(self.position_class, "date")
+        position_sign = getattr(self.position_class, "position_sign")
 
         for i in range(len(assets)):
             data = {
@@ -29,9 +30,10 @@ class DataWriter:
                 "date": date,
                 "asset": assets[i],
                 "direction": long_or_short(invested_amounts[i]),
-                "asset_ratio": asset_ratios[i],
                 "asset_weight": weights[i],
+                "scaler_factor": scaler_factor[i],
                 "amount_invested": invested_amounts[i],
+                "position_sign": position_sign[i],
             }
 
             insert_stmt = insert(existing_table).values(**data)
@@ -42,6 +44,6 @@ class DataWriter:
 
 def long_or_short(input_number: float):
     if input_number > 0:
-        return "LONG"
+        return "SHORT"
     if input_number < 0:
-        return "SHORT" 
+        return "LONG" 
